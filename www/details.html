@@ -1,0 +1,465 @@
+<script type="text/javascript">
+	var firstLoad = true;
+/*
+	// pour essai d'appui long
+	var node = document.getElementById("nav-img");
+	var longpress = false;
+	var presstimer = null;
+	var longtarget = null;
+
+	var cancel = function(e) {
+		if (presstimer !== null) {
+			clearTimeout(presstimer);
+			presstimer = null;
+		}
+
+		this.classList.remove("longpress");
+	};
+
+	var click = function(e) {
+		if (presstimer !== null) {
+			clearTimeout(presstimer);
+			presstimer = null;
+		}
+
+		this.classList.remove("longpress");
+
+		if (longpress) {
+			return false;
+		}
+
+		alert("press");
+	};
+
+	var start = function(e) {
+		console.log(e);
+
+		if (e.type === "click" && e.button !== 0) {
+			return;
+		}
+
+		longpress = false;
+
+		this.classList.add("longpress");
+
+		if (presstimer === null) {
+			presstimer = setTimeout(function() {
+				alert("long click");
+				longpress = true;
+			}, 1000);
+		}
+
+		return false;
+	};
+
+	node.addEventListener("mousedown", start);
+	node.addEventListener("touchstart", start);
+	node.addEventListener("click", click);
+	node.addEventListener("mouseout", cancel);
+	node.addEventListener("touchend", cancel);
+	node.addEventListener("touchleave", cancel);
+	node.addEventListener("touchcancel", cancel);
+*/
+	$(function() {
+		PARSE_BodyLanguage();
+		//ResizeGauges();
+
+		$('.dog-name').html(user.dogs[selectedDog].name);
+
+		if (user.dogs[selectedDog].id == "demo") {
+			aboiementsDemo();
+		}
+
+/*		var _h = $(window).innerHeight() - $('.top-bar').outerHeight() -
+				 $('.nav-bar').outerHeight() - $('.bottom-bar').outerHeight();
+		console.log(_h)
+		$('#details-content').css({
+			"max-height": (_h) + "px"
+		}); */
+
+		GetDayDataFromDB(
+			currentTimestampUsed,
+			function(data) {
+				DataToDisplay = data;
+				DrawHistory(DataToDisplay);
+			}
+		);
+		udpdateAvailableDatesArround(new Date(currentTimestampUsed)) ;
+
+		FormatNavTitle(currentTimestampUsed);
+
+		$('.nav-bar').click(function() {
+			swal({
+				html: '<div id="datepicker"></div>' + AddCloseIcoForSwal(),
+				showConfirmButton: false,
+				onOpen: function() {
+					$('#datepicker').datepicker({
+						maxDate: new Date,
+						// les mois sont entre 0 et 11.
+						minDate: new Date(2000, 0, 1),
+						defaultDate: new Date(currentTimestampUsed),
+						/*showButtonPanel: true,
+						changeMonth: true,
+						changeYear: true,
+						showOtherMonths: true,
+						selectOtherMonths: true,*/
+						onSelect: swal.clickConfirm
+					});
+
+					$('.swal2-popup').css({
+						"background": "linear-gradient(#ffffff, #fcfcfc 40%, " +
+													  "#f1f0f1 80%, #e6e6e6)",
+						"border": "1px solid #808080"
+					})
+				},
+				preConfirm: function() {
+					return Promise.resolve($('#datepicker')
+													.datepicker('getDate'));
+				}
+			}).then(function(result) {
+				if (result.dismiss === undefined) {
+					currentTimestampUsed = result.value;
+					FormatNavTitle(currentTimestampUsed);
+					GetDayDataFromDB(
+						currentTimestampUsed,
+						function(data) {
+							DataToDisplay = data;
+							DrawHistory(DataToDisplay);
+						}
+					);
+				}
+				udpdateAvailableDatesArround(new Date(currentTimestampUsed)) ;
+				$('#details-detected').addClass('details-detected-selected');
+				$('#details-warned').addClass('details-warned-selected');
+				$('#details-penalized').addClass('details-penalized-selected');
+			});
+		});
+
+		$('.nav-img').click(function() {
+			swal({
+				html: '<div id="datepicker"></div>' + AddCloseIcoForSwal(),
+				showConfirmButton: false,
+				onOpen: function() {
+					$('#datepicker').datepicker({
+						maxDate: new Date,
+						// les mois sont entre 0 et 11.
+						minDate: new Date(2000, 0, 1),
+						/*showButtonPanel: true,
+						changeMonth: true,
+						changeYear: true,
+						showOtherMonths: true,
+						selectOtherMonths: true,*/
+						onSelect: swal.clickConfirm
+					});
+
+					$('.swal2-popup').css({
+						"background": "linear-gradient(#ffffff, #fcfcfc 40%, " +
+													  "#f1f0f1 80%, #e6e6e6)",
+						"border": "1px solid #808080"
+					})
+				},
+				preConfirm: function() {
+					return Promise.resolve($('#datepicker')
+													.datepicker('getDate'));
+				}
+			}).then(function(result) {
+				if (result.dismiss === undefined) {
+					currentTimestampUsed = new Date(result.value).getTime();
+					FormatNavTitle(currentTimestampUsed);
+					GetDayDataFromDB(
+						currentTimestampUsed,
+						function(data) {
+							DataToDisplay = data;
+							InitGauges();
+							UpdateGaugesForTimestamp();
+						}
+					);
+					udpdateAvailableDatesArround(
+											new Date(currentTimestampUsed));
+				}
+			});
+		});
+	});
+
+	// affichage du journal d'aboiements
+	function DrawHistory(historyTab) {
+		var separator = '<div class="graph-item">&nbsp;</div>';
+		var tabContent = '';
+		var historyContent = '';
+		tabContent += separator;
+		var maxVal = 0;
+
+		var currentGraphScroll = $('#stats-graph').scrollLeft();
+		var tot = [0, 0, 0];
+
+		if ((historyTab !== undefined) || (historyTab.length >= 0)) {
+			for (var i = 0; i < historyTab.length; i++) {
+				for (var j = 0; j < historyTab[i].total.length; j++) {
+					if (historyTab[i].total[j] > maxVal) {
+						maxVal = historyTab[i].total[j];
+					}
+					tot[j] += historyTab[i].total[j];
+				}
+			}
+			if (maxVal == 0) {
+				maxVal = 1;
+			}
+			$('.details-scale').html(maxVal);
+			$('.tot-penalized-hi').html(Math.trunc(tot[2] / 10) == 0 ? "" :
+										Math.trunc(tot[2] / 10));
+			$('.tot-penalized-lo').html((tot[2] % 10));
+			$('.tot-warned-hi').html(Math.trunc(tot[1] / 10) == 0 ? "" :
+									 Math.trunc(tot[1] / 10));
+			$('.tot-warned-lo').html((tot[1] % 10));
+			$('.tot-detected-hi').html(Math.trunc(tot[0] / 10) == 0 ? "" :
+									   Math.trunc(tot[0] / 10));
+			$('.tot-detected-lo').html((tot[0] % 10));
+			if (maxVal > 0) {
+				var maxHeight = 127; //127px
+				for (var i = 0; i < historyTab.length; i++) {
+					tabContent +=
+						'<div class="graph-item graph-item-' + i + '">' +
+							'<div class="graph-item-detected-ctn">' +
+								'<div class="graph-item-detected" ' +
+									 'style="height:' +
+											(maxHeight * historyTab[i].total[0]
+													   / maxVal) + 'px">' +
+								'</div>' +
+							'</div>' +
+							'<div class="graph-item-warned-ctn">' +
+								'<div class="graph-item-warned" ' +
+									 'style="height:' +
+											(maxHeight * historyTab[i].total[1]
+													   / maxVal) + 'px">' +
+								'</div>' +
+							'</div>' +
+							'<div class="graph-item-penalized-ctn">' +
+								'<div class="graph-item-penalized" ' +
+									 'style="height:' +
+											(maxHeight * historyTab[i].total[2]
+													   / maxVal) + 'px">' +
+								'</div>' +
+							'</div>' +
+							'<div class="graph-legend-item">' + i + 'h</div>' +
+						'</div>';
+
+					for (var j = 0; j < historyTab[i].event.length; j++) {
+						var _date = new Date(historyTab[i].event[j].timestamp),
+							h = ('0' + _date.getHours()).slice(-2),
+							m = ('0' + _date.getMinutes()).slice(-2),
+							s = ('0' + _date.getSeconds()).slice(-2);
+						switch (historyTab[i].event[j].sanction) {
+							case 1:
+								historyContent +=
+									'<div class="history-item ' +
+												'history-item-detected">' +
+										'<div class="history-item-time">' +
+											 h + ':' + m + ':' + s +
+										'</div>' +
+										'<div class="history-item-text">' +
+											LangItem("CS000014") +
+										 '</div>' +
+									'</div>';
+								break; // détectés
+
+							case 2:
+								historyContent +=
+									'<div class="history-item ' +
+												'history-item-warned">' +
+										'<div class="history-item-time">' +
+											h + ':' + m + ':' + s +
+										'</div>' +
+										'<div class="history-item-text">' +
+											LangItem("CS000015") +
+										'</div>' +
+									'</div>';
+								break; // avertis
+
+							case 3:
+								historyContent +=
+									'<div class="history-item ' +
+												'history-item-penalized">' +
+										'<div class="history-item-time">' +
+											h + ':' + m + ':' + s +
+										'</div>' +
+										'<div class="history-item-text">' +
+											LangItem("CS000016") +
+										'</div>' +
+									'</div>';
+								break; // sanctionnés
+
+							default:
+								break;
+						}
+					}
+				}
+			}
+		}
+		tabContent += separator;
+		$('#stats-graph').html(tabContent);
+
+		if (historyTab.length > 19)
+			$('#stats-graph').scrollLeft($(window).innerWidth() / 14 * 8);
+
+		$('.chevron-left-graph').click(function() {
+			$('#stats-graph').scrollLeft($('#stats-graph').scrollLeft() -
+										 $(window).innerWidth() / 14 * 2);
+		});
+		$('.chevron-right-graph').click(function() {
+			$('#stats-graph').scrollLeft($('#stats-graph').scrollLeft() +
+										 $(window).innerWidth() / 14 * 2);
+		});
+
+		$('.history-content').html(historyContent)
+
+
+		// on remet à jour l'affichage utilisateur pour les nouvelles données
+		if (firstLoad == false) {
+			$('#stats-graph').scrollLeft(currentGraphScroll);
+		} else
+			firstLoad = false;
+
+		if ($('#details-detected').hasClass('details-detected-selected')
+																== false) {
+			HideItemType('detected');
+		}
+		if ($('#details-warned').hasClass('details-warned-selected')
+																== false) {
+			HideItemType('warned');
+		}
+		if ($('#details-penalized').hasClass('details-penalized-selected')
+																== false) {
+			HideItemType('penalized');
+		}
+	}
+
+	function HideItemType(type) {
+		$('.graph-item-' + type).css({
+			"visibility": "hidden"
+		});
+		$('.history-item-' + type).css({
+			"display": "none"
+		});
+	}
+
+	function ShowItemType(type) {
+		$('.graph-item-' + type).css({
+			"visibility": "visible"
+		});
+		$('.history-item-' + type).css({
+			"display": "block"
+		});
+	}
+
+	// affiche ou cache les détection dans le journal
+	function toggleDetected(_this) {
+		if ($(_this).hasClass('details-detected-selected') == false) {
+			$(_this).removeClass('details-detected');
+			$(_this).addClass('details-detected-selected');
+			ShowItemType('detected');
+		} else {
+			$(_this).addClass('details-detected');
+			$(_this).removeClass('details-detected-selected');
+			HideItemType('detected');
+		}
+	}
+
+	// affiche ou cache les avertissements dans le journal
+	function toggleWarned(_this) {
+		if ($(_this).hasClass('details-warned-selected') == false) {
+			$(_this).removeClass('details-warned');
+			$(_this).addClass('details-warned-selected');
+			ShowItemType('warned');
+		} else {
+			$(_this).addClass('details-warned');
+			$(_this).removeClass('details-warned-selected');
+			HideItemType('warned');
+		}
+	}
+
+	// affiche ou cache les sanctions dans le journal
+	function togglePenalized(_this) {
+		if ($(_this).hasClass('details-penalized-selected') == false) {
+			$(_this).removeClass('details-penalized');
+			$(_this).addClass('details-penalized-selected');
+			ShowItemType('penalized');
+		} else {
+			$(_this).addClass('details-penalized');
+			$(_this).removeClass('details-penalized-selected');
+			HideItemType('penalized');
+		}
+	}
+</script>
+
+	<div class="top-bar">
+		<div class="dog-name" onclick="LoadPage('accueil');">
+		</div>
+		<div class="app-param">
+			<span style="color:#fff;">Canicalm</span>&nbsp;Smart
+			<img src="./img/param.svg" onclick="LoadPage('param');" />
+		</div>
+	</div>
+	<div class="nav-bar">
+		<div class="nav-img" id="nav-img">
+			<img src="./img/calendar.svg" />
+		</div>
+		<div class="nav-title">
+			Aujourd'hui
+		</div>
+	</div>
+
+	<div id="details-content" class="details-content">
+		<div class="details-toolbar">
+			<button id="details-detected"
+					class="item details-detected-selected"
+					onclick="toggleDetected(this);">
+				<b><i name="CS000010">Détections</i></b>
+				<div id="tot-detected-hi"
+					 class="details-tot-ten tot-detected-hi"></div>
+				<div id="tot-detected-lo"
+					 class="details-tot-unit tot-detected-lo"></div>
+			</button>
+			<button id="details-warned"
+					class="item details-warned-selected"
+					onclick="toggleWarned(this);">
+				<b><i name="CS000011">Avertis</i></b>
+				<div id="tot-warned-hi"
+					 class="details-tot-ten tot-warned-hi"></div>
+				<div id="tot-warned-lo"
+					 class="details-tot-unit tot-warned-lo"></div>
+			</button>
+			<button id="details-penalized"
+					class="item details-penalized-selected"
+					onclick="togglePenalized(this);">
+				<b><i name="CS000012">Sanctions</i></b>
+				<div id="tot-penalized-hi"
+					 class="details-tot-ten tot-penalized-hi"></div>
+				<div id="tot-penalized-lo"
+					 class="details-tot-unit tot-penalized-lo"></div>
+			</button>
+		</div>
+		<div class="day-history-content">
+			<div class="details-stats">
+				<div class="details-stats-item chevron-left-graph">
+					<div class="chevron-left-legend">
+					</div>
+				</div>
+				<div class="details-stats-item chevron-right-graph">
+					<div class="chevron-right-legend">
+					</div>
+				</div>
+				<div class="stats-legend">
+				</div>
+				<div id="stats-graph" class="stats-graph">
+				</div>
+				<div id="details-scale" class="details-scale"></div>
+			</div>
+			<div class="details-history">
+				<div class="history-title">
+					<i name="CS000013">Journal des aboiements</i>
+				</div>
+				<div class="history-content">
+				</div>
+			</div>
+		</div>
+	</div>

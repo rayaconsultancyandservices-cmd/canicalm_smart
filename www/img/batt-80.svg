@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="10.20498mm"
+   height="4.7831378mm"
+   viewBox="0 0 10.20498 4.7831378"
+   version="1.1"
+   id="svg3228"
+   inkscape:version="0.92.2 (5c3e80d, 2017-08-06)"
+   sodipodi:docname="batt-80.svg">
+  <defs
+     id="defs3222" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.35"
+     inkscape:cx="1600.7136"
+     inkscape:cy="-719.53243"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1" />
+  <metadata
+     id="metadata3225">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(440.53106,46.326093)">
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#f7a828;stroke-width:0.26458332"
+       d="m -430.80471,-44.891257 v -0.956733 c 0,-0.26379 -0.21405,-0.478103 -0.47863,-0.478103 h -8.76909 c -0.26405,0 -0.47863,0.214048 -0.47863,0.478103 v 3.826933 c 0,0.263525 0.21458,0.478102 0.47863,0.478102 h 8.76909 c 0.26458,0 0.47863,-0.214577 0.47863,-0.478102 v -0.956733 c 0.26405,0 0.47863,-0.214578 0.47863,-0.478367 v -0.956733 c -2.7e-4,-0.264848 -0.21458,-0.478367 -0.47863,-0.478367 z m -0.95674,2.391569 h -7.81288 v -2.8702 h 7.81288 z"
+       id="path117" />
+    <rect
+       style="fill:#f7a828;stroke-width:0.26458332"
+       x="-439.19916"
+       y="-44.983334"
+       width="7.1437502"
+       height="2.1166666"
+       id="rect119" />
+  </g>
+</svg>

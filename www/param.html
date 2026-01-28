@@ -1,0 +1,881 @@
+<style type="text/css">
+	.swal2-title,
+	#swal2-title {
+		font-family: Karla;
+		font-size: 25px;
+		line-height: 50px;
+		color: #333;
+	}
+
+	.canicalm-swal-content-wrapper {
+		border: 1px solid #d3d3d3;
+		border-radius: 5px;
+		padding: 4px;
+	}
+
+	.canicalm-swal-content-wrapper .hours-selection {
+		width: calc(100% - 4px);
+		margin-bottom: 15px;
+	}
+
+	.canicalm-swal-subtitle {
+		width: calc(100% - 4px);
+		height: 35px;
+		line-height: 35px;
+		background-repeat: repeat-x;
+		background-image: url("./img/bg-dark.png");
+		background-size: auto 100%;
+		color: #f89e25;
+		border-radius: 5px;
+		margin: auto;
+		margin-bottom: 10px;
+	}
+
+	.scheduler-selection-cluster {
+		width: calc((100% - 40px) / 4);
+		/*-40px <=> margins and borders*/
+		height: 30px;
+		line-height: 30px;
+		background-color: #aaa;
+		display: inline-block;
+		border: 1px solid #d3d3d3;
+		background: #e6e6e6 url(css/images/ui-bg_glass_75_e6e6e6_1x400.png)
+					50% 50% repeat-x;
+		text-align: center;
+		font-size: 12px;
+		margin: 3px;
+		border-radius: 3px;
+	}
+
+	.scheduler-selection-cluster-bis {
+		background: #ccc;
+	}
+
+	.scheduler-selection-cluster-selected {
+		background-repeat: repeat-x;
+		background-image: url("./img/bg-dark.png");
+		background-size: auto 100%;
+		color: #f89e25;
+	}
+
+	.scheduler-selection-next {
+		height: 35px;
+		width: 35px;
+		float: right;
+		background-image: url("./img/next.svg");
+		background-position: center center;
+		background-size: 15px 15px;
+		background-repeat: no-repeat;
+	}
+
+	.scheduler-selection-prev {
+		height: 35px;
+		width: 35px;
+		float: left;
+		background-image: url("./img/prev.svg");
+		background-position: center center;
+		background-size: 15px 15px;
+		background-repeat: no-repeat;
+	}
+</style>
+<script type="text/javascript">
+	var localTimeScheduler = {
+		monday:		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					 0, 0, 0, 0, 0],
+		tuesday:	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					 0, 0, 0, 0, 0],
+		wednesday:	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					 0, 0, 0, 0, 0],
+		thursday:	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					 0, 0, 0, 0, 0],
+		friday:		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					 0, 0, 0, 0, 0],
+		saturday:	[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					 0, 0, 0, 0, 0],
+		sunday:		[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+					 0, 0, 0, 0, 0],
+	};
+
+	$(function() {
+		// initialise les données des heures d'activations des sanctions à
+		// l'heure locale
+		UpdatePenalizationSchedulerToTimeZone();
+
+		$('.dog-name').html(user.dogs[selectedDog].name);
+		$('.edit-dog-text').attr("value", user.dogs[selectedDog].name);
+
+		$('.select-lang').find('span:first').html(langTab[user.lang]);
+		$('.select-lang').find('img:first')
+								.attr('src', './img/' + user.lang + '.png');
+
+		console.log("user.lang : " + user.lang);
+		console.log("user.dogs[0].schedule.monday : " +
+						user.dogs[0].schedule.monday);
+
+		var content = '';
+		switch (user.dogs[selectedDog].mode) {
+			default:
+			case 1:
+				content = '<i name="CS000020">Bips seuls</i>';
+				break;
+			case 2:
+				content = '<i name="CS000021">Stimulation faible</i>';
+				break;
+			case 3:
+				content = '<i name="CS000022">Stimulation forte</i>';
+				break;
+			case 4:
+				content = '<i name="CS000019">Stimulation progressive</i>';
+				break;
+		}
+		$('.select-penalization').html(content);
+
+/*		var _h = $(window).innerHeight() - $('.top-bar').outerHeight() -
+				 $('.nav-bar').outerHeight() - $('.bottom-bar').outerHeight() -
+				 $('.reserved-haut').outerHeight() -
+				 $('.reserved-bas').outerHeight();
+//		console.log(_h)
+		$('#param-content').css({
+			"max-height": (_h) + "px",
+			"overflow-x": "hidden"
+		}); */
+
+		InitSlider();
+		FormatPenalizationScheduler();
+		UpdateParamStatus();
+
+		$('.select-lang').click(function() {
+			if ($(this).hasClass('input-select-deployed') == true) {
+				$(this).removeClass('input-select-deployed');
+				$(this).find('div:first').remove();
+			} else {
+				$(this).addClass('input-select-deployed');
+				var content =
+					'<div class="input-select-deployed-content">' +
+						'<div class="lang-item" name="fr" \
+							  onclick="LanguageSelection(this);">\
+							<img src="./img/fr.png" />\
+							<span>Français</span>\
+						 </div>' +
+						'<div class="lang-item" name="de" \
+							  onclick="LanguageSelection(this);">\
+							<img src="./img/de.png" />\
+							<span>Deutsch</span>\
+						 </div>' +
+						'<div class="lang-item" name="en" \
+							  onclick="LanguageSelection(this);">\
+							<img src="./img/en.png" />\
+							<span>English</span>\
+						 </div>' +
+						'<div class="lang-item" name="es" \
+							  onclick="LanguageSelection(this);">\
+							<img src="./img/es.png" />\
+							<span>Español</span>\
+						 </div>' +
+						'<div class="lang-item" name="it" \
+							  onclick="LanguageSelection(this);">\
+							<img src="./img/it.png" />\
+							<span>Italiano</span>\
+						 </div>' +
+					'</div>';
+				$(this).append(content);
+			}
+		});
+
+		$('.select-penalization').click(function() {
+			if ($(this).hasClass('input-select-deployed') == true) {
+				$(this).removeClass('input-select-deployed');
+				$(this).find('div:first').remove();
+			} else {
+				$(this).addClass('input-select-deployed');
+				var content =
+					'<div class="input-select-deployed-content">' +
+						'<div class="mode-selection" name="mode-1">' +
+							LangItem('CS000020') +
+						'</div>' +
+						'<div class="mode-selection" name="mode-2">' +
+							LangItem('CS000021') +
+						'</div>' +
+						'<div class="mode-selection" name="mode-3">' +
+							LangItem('CS000022') +
+						'</div>' +
+						'<div class="mode-selection" name="mode-4">' +
+							LangItem('CS000019') +
+						'</div>' +
+					'</div>';
+				$(this).append(content);
+				$('.mode-selection').click(function() {
+					$('.select-penalization').html($(this).html());
+					user.dogs[selectedDog].mode =
+									parseInt($(this).attr("name").slice(-1));
+					// connexion BLE active => on enregistre le paramètre
+					if (BLECurrentlyConnected == true)
+					{
+						sendDataConfig_mode_BLE();
+						SaveUserData();
+					}
+				});
+			}
+		});
+
+		PARSE_BodyLanguage();
+	});
+
+	// change la langue de l'application à partir de la seleciton de
+	// l'utilsateur
+	function LanguageSelection(_this) {
+		user.lang = $(_this).attr("name");
+		saveDataToStorage('user', user);
+		$('.select-lang').html($(_this).html());
+		PARSE_BodyLanguage();
+		$('input-select-lang-deployed-content').remove();
+	}
+
+	// initialise le slider de niveau de détection des aboiements
+	function InitSlider() {
+		sliderValue = user.dogs[selectedDog].detectionLevel;
+		$('#level-slider').slider({
+			min: 0,
+			max: 255,
+			value: sliderValue,
+			slide: function(event, _slider) {
+				$('.level-slider-low').css({
+					"opacity": (1 - _slider.value * 0.8 / 255) + ""
+				});
+				$('.level-slider-high').css({
+					"opacity": (0.2 + _slider.value * 0.8 / 255) + ""
+				});
+			},
+			stop: function(event, _slider) {
+				user.dogs[selectedDog].detectionLevel = _slider.value;
+				// connexion BLE active => on enregistre le paramètre
+				if (BLECurrentlyConnected == true)
+				{
+					sendDataConfig_sensibilite_BLE();
+					SaveUserData();
+				}
+			}
+		});
+
+		$('.level-slider-low').css({
+			"opacity": (1 - sliderValue * 0.8 / 255) + ""
+		});
+		$('.level-slider-high').css({
+			"opacity": (0.2 + sliderValue * 0.8 / 255) + ""
+		});
+	}
+
+	function FormatPenalizationScheduler() {
+		var schedule = localTimeScheduler;
+		var content = '';
+		$('.schedule').html(content);
+		$.each(
+			schedule,
+			// pour chaque jour on récupère l'index du jour "key", et le tableau
+			//  horaire "value"
+			function(key, value)
+			{
+				var _d = new Date();
+				// permet de récupérer le décalage entre l'heure du Canicalm et
+				// celle de l'application, i.e. l'offset entre l'heure UTC et
+				// l'heure locale
+				var offMin = (60 - _d.getMinutes() + _d.getUTCMinutes()) % 60;
+				var pourcent = offMin * 100 / 60;
+				var dec = 0;
+				if (pourcent == 25) {
+					dec = 23;
+				} else if (pourcent == 50) {
+					dec = 23;
+				} else if (pourcent == 75) {
+					dec = 23;
+				} else if (pourcent != 0) {
+					dec = 23;
+				}
+				console.log("FormatPenalizationScheduler");
+				console.log("offMin : " + offMin);
+				console.log("pourcent : " + pourcent);
+
+				var content =
+					'<div class="schedule-' + key + ' schedule-day" \
+						  onclick="UpdatePenalizationScheduler(\'' +
+															key + '\');">' +
+						'<div class="schedule-title">\
+							<i name="CSDAY-' + key + '">' +
+								dayTab[user.lang][key] +
+						   '</i>\
+					 </div>' +
+					'<input type="button" class="schedule-configuration item" \
+							name="schedule-' + key + '" />' +
+					'<div class="hours-selection">';
+				for (var i = 0; i < value.length; i++) {
+					content += '<div class="cluster cluster-' + i;
+					if (value[i] == 1) {
+						content += ' selected';
+					}
+					if (i == 0)
+						content += ' cluster-first';
+					else if (i == 23)
+						content += ' cluster-last';
+					content += '">';
+					if ((i == 0) || (i == 6) || (i == 12) || (i == 18) ||
+						(i == 23)) {
+						content += '<span class="hours">' + i + 'h</span>';
+					}
+
+					if ((((i + dec) % 24) == 5) || (((i + dec) % 24) == 11) ||
+						(((i + dec) % 24) == 17) || (((i + dec) % 24) == 22)) {
+						content += '<span class="grad-b"></span>';
+					} else {
+						content += '<span class="grad"></span>';
+					}
+					content += '</div>';
+
+				}
+				content += '	</div>';
+				content += '</div>';
+				$('.schedule').append(content);
+
+
+				if (pourcent == 0) {
+					$('.hours-selection .cluster').css({
+						width: "calc(100% / 24)"
+					});
+					$('.hours-selection .grad').css({
+						right: "0"
+					});
+					$('.hours-selection .grad-b').css({
+						right: "0"
+					});
+				} else {
+					$('.hours-selection .cluster').css({
+						width: "calc(100% / 25)"
+					});
+					$('.hours-selection .grad').css({
+						right: (100 - pourcent) + "%"
+					});
+					$('.hours-selection .grad-b').css({
+						right: (100 - pourcent) + "%"
+					});
+				}
+
+				if (window.innerWidth > 380) {
+					$('.scheduler-selection-cluster').css({
+						"font-size": "12px"
+					});
+				} else if (window.innerWidth > 335) {
+					$('.scheduler-selection-cluster').css({
+						"font-size": "10px"
+					});
+				} else {
+					$('.scheduler-selection-cluster').css({
+						"font-size": "8px"
+					});
+				}
+
+			}
+		);
+	}
+
+	// passe la plannification Horaire de UTC à heure locale, i.e. du Canicalm
+	// au smartphone
+	function UpdatePenalizationSchedulerToTimeZone() {
+		var _d = new Date();
+		// permet de récupérer le décalage entre l'heure du Canicalm et celle de
+		// l'application, i.e. l'offset entre l'heure UTC et l'heure locale
+		var offset = _d.getHours() - _d.getUTCHours();
+
+		$.each(
+			// données UTC
+			user.dogs[selectedDog].schedule,
+			// pour chaque jour (key) on prend le tableau des heures (value)
+			function(key, value)
+			{
+//				console.log("JLAF TO entry -> " + key + " " + value)
+				// on balaie le tableau des heures
+				for (var i = 0; i < value.length; i++)
+				{
+					// on décale en +
+					if (offset > 0) {
+						// on reste dans la même journée
+						if ((i + offset) < value.length) {
+							// on décale l'heure
+							localTimeScheduler[key][i + offset] = value[i];
+						}
+						// on passe à la journée suivante
+						else {
+							// l'heure devient le début du jour suivant
+							localTimeScheduler[GetNextDay(key)]
+											  [(i + offset) % 24] = value[i];
+						}
+					}
+					// on décale en -
+					else if (offset < 0) {
+						// on reste dans la même journée
+						if ((i + offset) >= 0) {
+							// l'heure devient l'heure décalée en -
+							localTimeScheduler[key][i + offset] = value[i];
+						}
+						// on passe à la journée précédente
+						else {
+							// l'heure devient la fin du jour précédent
+							localTimeScheduler[GetPreviousDay(key)]
+											  [24 + i + offset] = value[i];
+						}
+					}
+				}
+
+//				console.log("JLAF TO -> " + key + " " + localTimeScheduler[key])
+			}
+		);
+	}
+
+	// passe la plannification Horaire de heure locale à UTC, i.e. du smartphone
+	// au Canicalm
+	function UpdatePenalizationSchedulerFromTimeZone() {
+		var _d = new Date();
+		// permet de récupérer le décalage entre l'heure de l'application et
+		// celle du Canicalm, i.e. l'offset entre l'heure locale et l'heure UTC
+		var offset = _d.getUTCHours() - _d.getHours();
+
+		$.each(
+			// données heure locale
+			localTimeScheduler,
+			// pour chaque jour (key) on prend le tableau des heures (value)
+			function(key, value)
+			{
+//				console.log("JLAF FROM entry -> " + key + " " + value)
+				// on balaie le tableau des heures
+				for (var i = 0; i < value.length; i++)
+				{
+					// on décale en +
+					if (offset > 0) {
+						// on reste dans la même journée
+						if ((i + offset) < value.length) {
+							// on décale l'heure
+							user.dogs[selectedDog]
+											.schedule[key]
+													 [i + offset] = value[i];
+						}
+						// on passe à la journée suivante
+						else {
+							// l'heure devient le début du jour suivant
+							user.dogs[selectedDog]
+										.schedule[GetNextDay(key)]
+												 [(i + offset) % 24] = value[i];
+						}
+					// on décale en -
+					} else if (offset < 0) {
+						// on reste dans la même journée
+						if ((i + offset) >= 0)
+						{
+							// l'heure devient l'heure décalée en -
+							user.dogs[selectedDog]
+											.schedule[key]
+													 [i + offset] = value[i];
+						}
+						// on passe à la journée précédente
+						else {
+							// l'heure devient la fin du jour précédent
+							user.dogs[selectedDog]
+										.schedule[GetPreviousDay(key)]
+												 [24 + i + offset] = value[i];
+						}
+					}
+				}
+//				console.log("JLAF FROM -> " + key + " " +
+//										user.dogs[selectedDog].schedule[key])
+			}
+		);
+	}
+
+	// permet de décaler d'un jour en avant
+	function GetNextDay(day) {
+		var ret = "err";
+		switch (day) {
+			case "monday":
+				ret = "tuesday";
+				break;
+			case "tuesday":
+				ret = "wednesday";
+				break;
+			case "wednesday":
+				ret = "thursday";
+				break;
+			case "thursday":
+				ret = "friday";
+				break;
+			case "friday":
+				ret = "saturday";
+				break;
+			case "saturday":
+				ret = "sunday";
+				break;
+			case "sunday":
+				ret = "monday";
+				break;
+			default:
+				break;
+		}
+		return ret;
+	}
+
+	// permet de décaler d'un jour en arrière
+	function GetPreviousDay(day) {
+		var ret = "err";
+		switch (day)
+		{
+			case "monday":
+				ret = "sunday";
+				break;
+			case "tuesday":
+				ret = "monday";
+				break;
+			case "wednesday":
+				ret = "tuesday";
+				break;
+			case "thursday":
+				ret = "wednesday";
+				break;
+			case "friday":
+				ret = "thursday";
+				break;
+			case "saturday":
+				ret = "friday";
+				break;
+			case "sunday":
+				ret = "saturday";
+				break;
+			default:
+				break;
+		}
+		return ret;
+	}
+
+	// mise à jour de l'affichage des horaires de répression des aboiements
+	function UpdatePenalizationScheduler(day) {
+		var _d = new Date();
+		// permet de récupérer le décalage entre l'heure du Canicalm et
+		// celle de l'application, i.e. l'offset entre l'heure UTC et
+		// l'heure locale
+		var offMin = (60 - _d.getMinutes() + _d.getUTCMinutes()) % 60;
+		var pourcent = offMin * 100 / 60;
+		var cx = "";
+		var dec = 0;
+		if (pourcent == 25) {
+			cx = "¾";
+			dec = 23;
+		} else if (pourcent == 50) {
+			cx = "½";
+			dec = 23;
+		} else if (pourcent == 75) {
+			cx = "¼";
+			dec = 23;
+		} else if (pourcent != 0) {
+			cx = "±";
+			dec = 23;
+		}
+
+		clusterSchedule = localTimeScheduler[day];
+		var title = '<div class="canicalm-swal-subtitle">\
+						<span class="scheduler-selection-prev"></span>\
+						<i name="CSDAY-' + day + '">' +
+							dayTab[user.lang][day] +
+					   '</i>\
+						<span class="scheduler-selection-next"></span>\
+					 </div>';
+		var clusters = '<div id="cluster-schedule" class="hours-selection">';
+		for (var i = 0; i < localTimeScheduler[day].length; i++) {
+			clusters += '<div class="cluster cluster-' + i;
+			if (localTimeScheduler[day][i] == 1) {
+				clusters += ' selected';
+			} else {
+				clusters += ' unselected';
+			}
+			clusters += '">';
+			if ((i == 0) || (i == 6) || (i == 12) || (i == 18) || (i == 23)) {
+				clusters += '<span class="hours">' + i + 'h</span>';
+			}
+
+			if ((((i + dec) % 24) == 5) || (((i + dec) % 24) == 11) ||
+				(((i + dec) % 24) == 17) || (((i + dec) % 24) == 22)) {
+				clusters += '<span class="grad-b"></span>';
+			} else {
+				clusters += '<span class="grad"></span>';
+			}
+			clusters += '</div>';
+
+		}
+		clusters += '	</div>';
+
+		var scheduler = '<div class="scheduler-selection">';
+		for (var i = 0; i < 6; i++) {
+			scheduler += '<div class="scheduler-selection-cluster \
+									  scheduler-selection-cluster-bis' +
+									  ((localTimeScheduler[day][i] == 1)
+								  ? " scheduler-selection-cluster-selected"
+								  :"") +
+							'" onclick="UpdateClusterSchedule(' + i + ', \
+															  this);">' +
+							('0' + ((i + dec) % 24)).slice(-2) + 'h' + cx + '-' +
+							('0' + ((i + 1 + dec) % 24)).slice(-2) + 'h' + cx + '\
+						  </div>';
+			scheduler += '<div class="scheduler-selection-cluster' +
+									  ((localTimeScheduler[day][i + 6] == 1)
+								  ? " scheduler-selection-cluster-selected"
+								  : "") +
+							'" onclick="UpdateClusterSchedule(' + (i + 6) + ', \
+															  this);">' +
+								('0' + ((i + 6 + dec) % 24)).slice(-2) + 'h' + cx + '-' +
+								('0' + ((i + 6 + 1 + dec) % 24)).slice(-2) + 'h' + cx + '\
+						  </div>';
+			scheduler += '<div class="scheduler-selection-cluster \
+									  scheduler-selection-cluster-bis' +
+									  ((localTimeScheduler[day][i + 12] == 1)
+								  ? " scheduler-selection-cluster-selected"
+								  : "") +
+							 '" onclick="UpdateClusterSchedule(' +
+															   (i + 12) + ', \
+															   this);">' +
+								('0' + ((i + 12 + dec) % 24)).slice(-2) + 'h' + cx + '-' +
+								('0' + ((i + 12 + 1 + dec) % 24)).slice(-2) + 'h' + cx + '\
+						  </div>';
+			scheduler += '<div class="scheduler-selection-cluster' +
+									  ((localTimeScheduler[day][i + 18] == 1)
+								  ? " scheduler-selection-cluster-selected"
+								  : "") +
+							 '" onclick="UpdateClusterSchedule(' +
+															   (i + 18) + ', \
+															   this);">' +
+								('0' + ((i + 18 + dec) % 24)).slice(-2) + 'h' + cx + '-' +
+								('0' + ((i + 18 + 1 + dec) % 24)).slice(-2) + 'h' + cx + '\
+						  </div>';
+		}
+		var content = '<div class="canicalm-swal-content-wrapper">' +
+							title + clusters + scheduler +
+					  '</div>';
+
+		swal({
+			html: content + AddCloseIcoForSwal(),
+			showConfirmButton: false,
+			onOpen: function() {
+
+				$('.swal2-popup').css({
+					"background": "linear-gradient(#ffffff, #fcfcfc 40%, \
+												   #f1f0f1 80%, #e6e6e6)",
+					"border": "1px solid #808080"
+				})
+				$('.scheduler-selection-next').click(function() {
+					localTimeScheduler[day] = clusterSchedule;
+					UpdatePenalizationSchedulerFromTimeZone();
+					SaveUserData();
+					clusterSchedule = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+									   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+					day = GetNextDay(day);
+					UpdatePenalizationScheduler(day);
+				});
+				$('.scheduler-selection-prev').click(function() {
+					localTimeScheduler[day] = clusterSchedule;
+					UpdatePenalizationSchedulerFromTimeZone();
+					SaveUserData();
+					clusterSchedule = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+									   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+					day = GetPreviousDay(day);
+					UpdatePenalizationScheduler(day);
+				});
+
+				if (pourcent == 0) {
+					$('.hours-selection .cluster').css({
+						width: "calc(100% / 24)"
+					});
+					$('.hours-selection .grad').css({
+						right: "0"
+					});
+					$('.hours-selection .grad-b').css({
+						right: "0"
+					});
+				} else {
+					$('.hours-selection .cluster').css({
+						width: "calc(100% / 25)"
+					});
+					$('.hours-selection .grad').css({
+						right: (100 - pourcent) + "%"
+					});
+					$('.hours-selection .grad-b').css({
+						right: (100 - pourcent) + "%"
+					});
+				}
+				if (window.innerWidth > 380) {
+					$('.scheduler-selection-cluster').css({
+						"font-size": "12px"
+					});
+				} else if (window.innerWidth > 335) {
+					$('.scheduler-selection-cluster').css({
+						"font-size": "12px"
+					});
+				} else {
+					$('.scheduler-selection-cluster').css({
+						"font-size": "10px"
+					});
+				}
+
+				// pour rafraichir avec la bonne police
+				UpdateClusterSchedule(-1, this);
+			},
+			onClose: function() {
+				localTimeScheduler[day] = clusterSchedule;
+				UpdatePenalizationSchedulerFromTimeZone();
+				SaveUserData();
+				sendDataConfig_program1_BLE();
+				sendDataConfig_program2_BLE();
+				FormatPenalizationScheduler();
+			}
+		});
+	}
+
+	// mise à jour de des la répression des aboiements pour une heure précise
+	function UpdateClusterSchedule(hour, _this) {
+		var _d = new Date();
+		// permet de récupérer le décalage entre l'heure du Canicalm et
+		// celle de l'application, i.e. l'offset entre l'heure UTC et
+		// l'heure locale
+		var offMin = (60 - _d.getMinutes() + _d.getUTCMinutes()) % 60;
+		var pourcent = offMin * 100 / 60;
+		var dec = 0;
+		if (pourcent == 25) {
+			dec = 23;
+		} else if (pourcent == 50) {
+			dec = 23;
+		} else if (pourcent == 75) {
+			dec = 23;
+		} else if (pourcent != 0) {
+			dec = 23;
+		}
+
+		if ($(_this).hasClass('scheduler-selection-cluster-selected') == true)
+			$(_this).removeClass('scheduler-selection-cluster-selected');
+		else
+			$(_this).addClass('scheduler-selection-cluster-selected')
+		if (clusterSchedule[hour] == 0)
+			clusterSchedule[hour] = 1;
+		else
+			clusterSchedule[hour] = 0;
+
+		var clusters = '';
+		for (var i = 0; i < clusterSchedule.length; i++) {
+			clusters += '<div class="cluster cluster-' + i;
+			if (clusterSchedule[i] == 1) {
+				clusters += ' selected';
+			} else {
+				clusters += ' unselected';
+			}
+			clusters += '">';
+			if ((i == 0) || (i == 6) || (i == 12) || (i == 18) || (i == 23)) {
+				clusters += '<span class="hours">' + i + 'h</span>';
+			}
+
+			if ((((i + dec) % 24) == 5) || (((i + dec) % 24) == 11) ||
+				(((i + dec) % 24) == 17) || (((i + dec) % 24) == 22)) {
+				clusters += '<span class="grad-b"></span>';
+			} else {
+				clusters += '<span class="grad"></span>';
+			}
+			clusters += '</div>';
+
+		}
+		$('#cluster-schedule').html(clusters);
+
+		if (pourcent == 0) {
+			$('.hours-selection .cluster').css({
+				width: "calc(100% / 24)"
+			});
+			$('.hours-selection .grad').css({
+				right: "0"
+			});
+			$('.hours-selection .grad-b').css({
+				right: "0"
+			});
+		} else {
+			$('.hours-selection .cluster').css({
+				width: "calc(100% / 25)"
+			});
+			$('.hours-selection .grad').css({
+				right: (100 - pourcent) + "%"
+			});
+			$('.hours-selection .grad-b').css({
+				right: (100 - pourcent) + "%"
+			});
+		}
+
+		if (window.innerWidth > 380) {
+			$('.scheduler-selection-cluster').css({
+				"font-size": "12px"
+			});
+		} else if (window.innerWidth > 335) {
+			$('.scheduler-selection-cluster').css({
+				"font-size": "10px"
+			});
+		} else {
+			$('.scheduler-selection-cluster').css({
+				"font-size": "8px"
+			});
+		}
+
+	}
+</script>
+	<div class="top-bar">
+		<div class="dog-name" onclick="LoadPage('accueil');">
+		</div>
+		<div class="app-param">
+			<span style="color:#fff;">Canicalm</span>&nbsp;Smart
+		</div>
+	</div>
+
+	<div class="nav-bar">
+		<div class="nav-img">
+			<img src="./img/param-o.svg" />
+		</div>
+		<div class="nav-title">
+			<i name="CS000017">Paramètres</i>
+		</div>
+	</div>
+
+	<div id="param-content" class="param-content">
+		<div class="edit-dog">
+			<input type="button" class="item edit-dog-text"
+				   name="edit-dog-text" value="" />
+			<input type="button" class="item edit-dog-edit"
+				   name="edit-dog-edit" value=" "
+				   onclick="RenameCurrentAnimal();" />
+			<input type="button" class="item edit-dog-delete"
+				   name="edit-dog-delete" value=" " onclick="RemoveData();" />
+		</div>
+		<button class="item input-select select-lang param-item"
+				name="select-lang"><img src="./img/fr.png" />
+			<span>Français</span>
+		</button>
+		<div class="param-overlay"></div>
+		<div class="param-connected">
+			<button type="button"
+					class="item input-select select-penalization param-item"
+					name="select-penalization">
+				<i name="CS000019">Stimulation Progressive</i>
+			</button>
+			<div class="item level-detection param-item">
+				<div class="level-detection-title">
+					<i name="CS000018">Niveau de détection</i>
+				</div>
+				<div class="level-slider-ctn">
+					<img class="level-slider-low" src="./img/low-barkings.svg" />
+					<img class="level-slider-high" src="./img/high-barkings.svg" />
+					<div class="level-slider-background">
+						<div id="level-slider"></div>
+					</div>
+				</div>
+			</div>
+			<div class="item schedule param-item">
+			</div>
+			<div class="end-of-param">
+				&nbsp;
+			</div>
+		</div>
+	</div>

@@ -1,0 +1,364 @@
+<script type="text/javascript">
+	$(function() {
+		PARSE_BodyLanguage();
+
+		$('.dog-name').html(user.dogs[selectedDog].name);
+
+		console.log(user.dogs[selectedDog].id);
+		if (user.dogs[selectedDog].id == "demo") {
+			aboiementsDemo();
+		}
+
+		// affichage du mode de détection actuel
+		switch (user.dogs[selectedDog].mode) {
+			case 1:
+				$('.numeric-title').html('<i name="CS000020">Bips seuls</i>');
+				break;
+			case 2:
+				$('.numeric-title')
+					.html('<i name="CS000021">Stimulation faible</i>');
+				break;
+			case 3:
+				$('.numeric-title')
+					.html('<i name="CS000022">Stimulation forte</i>');
+				break;
+			case 4:
+				$('.numeric-title')
+					.html('<i name="CS000019">Stimulation progressive</i>');
+				break;
+		}
+
+
+/*		var _h = $(window).innerHeight() - $('.top-bar').outerHeight() -
+				 $('.nav-bar').outerHeight() - $('.bottom-bar').outerHeight() -
+				 $('.reserved-haut').outerHeight() -
+				 $('.reserved-bas').outerHeight();
+		var _p = (_h - $('#day-abstract').outerHeight()) / 4;
+		console.log(_h, _p)
+		$('#day-abstract').css({
+			"padding-bottom": (_p) + "px",
+			"min-height": (_h - _p) + "px"
+		}); */
+
+		FormatNavTitle(currentTimestampUsed);
+		GetDayDataFromDB(
+			currentTimestampUsed,
+			function(data) {
+				DataToDisplay = data;
+				InitGauges();
+				UpdateGaugesForTimestamp();
+			}
+		);
+		udpdateAvailableDatesArround(new Date(currentTimestampUsed)) ;
+
+		$('.nav-bar').click(function() {
+			swal({
+				html: '<div id="datepicker"></div>' + AddCloseIcoForSwal(),
+				showConfirmButton: false,
+				onOpen: function() {
+					$('#datepicker').datepicker({
+						maxDate: new Date,
+						// les mois sont entre 0 et 11.
+						minDate: new Date(2000, 0, 1),
+						defaultDate: new Date(currentTimestampUsed),
+						/*showButtonPanel: true,
+						changeMonth: true,
+						changeYear: true,
+						showOtherMonths: true,
+						selectOtherMonths: true,*/
+						onSelect: swal.clickConfirm
+					});
+
+					$('.swal2-popup').css({
+						"background": "linear-gradient(#ffffff, #fcfcfc 40%, " +
+													  "#f1f0f1 80%, #e6e6e6)",
+						"border": "1px solid #808080"
+					})
+				},
+				preConfirm: function() {
+					return Promise.resolve($('#datepicker')
+													.datepicker('getDate'));
+				}
+			}).then(function(result) {
+				if (result.dismiss === undefined) {
+					currentTimestampUsed = new Date(result.value).getTime();
+					FormatNavTitle(currentTimestampUsed);
+					GetDayDataFromDB(
+						currentTimestampUsed,
+						function(data) {
+							DataToDisplay = data;
+							InitGauges();
+							UpdateGaugesForTimestamp();
+						}
+					);
+					udpdateAvailableDatesArround(
+											new Date(currentTimestampUsed));
+				}
+			});
+		});
+
+		$('.nav-img').click(function() {
+			swal({
+				html: '<div id="datepicker"></div>' + AddCloseIcoForSwal(),
+				showConfirmButton: false,
+				onOpen: function() {
+					$('#datepicker').datepicker({
+						maxDate: new Date,
+						// les mois sont entre 0 et 11.
+						minDate: new Date(2000, 0, 1),
+						/*showButtonPanel: true,
+						changeMonth: true,
+						changeYear: true,
+						showOtherMonths: true,
+						selectOtherMonths: true,*/
+						onSelect: swal.clickConfirm
+					});
+
+					$('.swal2-popup').css({
+						"background": "linear-gradient(#ffffff, #fcfcfc 40%, " +
+													  "#f1f0f1 80%, #e6e6e6)",
+						"border": "1px solid #808080"
+					})
+				},
+				preConfirm: function() {
+					return Promise.resolve($('#datepicker').
+													datepicker('getDate'));
+				}
+			}).then(function(result) {
+				if (result.dismiss === undefined) {
+					currentTimestampUsed = new Date(result.value).getTime();
+					FormatNavTitle(currentTimestampUsed);
+					GetDayDataFromDB(
+						currentTimestampUsed,
+						function(data) {
+							DataToDisplay = data;
+							InitGauges();
+							UpdateGaugesForTimestamp();
+						}
+					);
+					udpdateAvailableDatesArround(
+											new Date(currentTimestampUsed));
+				}
+			});
+		});
+	});
+
+	// initalisation de la gauge d'aboiement par défaut
+	//
+	// gauge-a          : Demi cercle gris clair (fond du demi camenbert)
+	// gauge-b          : Demi cercle gris foncé (au centre demi camenbert pour
+	//                    ne laisser qu'un bande de gauge-a)
+	// gauge-c          : Demi cercle blanc (au centre demi camenbert pour ne
+	//                    laisser qu'une bande fine de gauge-b)
+	// gauge-d          : Arc de cercle large et blanc (tourné pour ne garder de
+	//                    la bande restante gris clair de gauge-a que l'angle
+	//                    souhaité)
+	// g_detected       : Arc de cercle large avec gradient gris foncé (tourné
+	//                    pour remplacer la zone vidée par gauge-d)
+	// g_warmed         : Arc cercle légerement plus large en orange semi
+	//                    transparent (tourné pour couvrir en débordant l'angle
+	//                    souhaité de la bande gris clair pas encore utilisée)
+	// details          : Demi cercle gris foncé (avec le texte "+ DÉTAILS")
+	// gauge-bottom-bar : rectangle gris foncé ( en bas du demi camenbert)
+    //                      _----_
+    //                    /       \
+    //                   | Détails |
+	//  +------+----------------------------+------+
+    //         |      gauge_bottom_bar      |
+    //         +--------------------------- +
+	function InitGauges() {
+		$('.gauges-container').html(
+			'<div class="gauge-a"></div>' +
+			'<div class="gauge-b"></div>' +
+			'<div class="gauge-c"></div>' +
+			'<div class="gauge-d"></div>' +
+			'<div class="g_detected"></div>' +
+			'<div class="g_warned"></div>' +
+			'<div class="gauge-e"></div>' +
+			'<div class="gauge-f"></div>' +
+			'<div class="g_penalized"></div>' +
+			'<div class="details" onclick="LoadPage(\'details\');">' +
+				'<div>+<br>' + LangItem("CS000004") +
+			   '</div>' +
+			'</div>' +
+			'<div class="gauge-bottom-bar"></div>'
+		);
+	}
+
+	// met à jour la gauge d'aboiements
+	function SetGauges(barkingsTab) {
+		if (barkingsTab !== undefined) {
+			if ((barkingsTab[0] != 0) || (barkingsTab[1] != 0) ||
+				(barkingsTab[2] != 0)) {
+				var val = 0;
+				var increase = 0;
+
+				// ramener en % sur 0.5 tour
+				var g_detected = Math.trunc((barkingsTab[0]) /
+									(barkingsTab[0] + barkingsTab[1] +
+									 barkingsTab[2]) * 1000 * 0.5);
+				var g_warned = Math.trunc((barkingsTab[0] + barkingsTab[1]) /
+									(barkingsTab[0] + barkingsTab[1] +
+									 barkingsTab[2]) * 1000 * 0.5);
+				// toujours pour arriver à 100%
+				var g_penalized = 500;
+				var sep = 5;
+//				console.log("Détectés : " + g_detected);
+//				console.log("Avertis : " + g_warned);
+//				console.log("Sanctionnés : " + g_penalized);
+
+				$('.numeric-detected span').html(barkingsTab[0]);
+				$('.numeric-warned span').html(barkingsTab[1]);
+				$('.numeric-penalized span').html(barkingsTab[2]);
+
+				if (((g_detected != g_warned) || (g_warned != g_penalized)) &&
+					g_detected != 0) {
+					$('.g_detected').css({
+						"transform": "rotate(." + ("00" +
+										(g_detected + sep)).slice(-3) + "turn)"
+					});
+					$('.gauge-d').css({
+						"transform": "rotate(." + ("00" +
+										(g_detected + sep)).slice(-3) + "turn)"
+					});
+				}
+				else
+				{
+					$('.g_detected').css({
+						"transform": "rotate(." + ("00" +
+										g_detected).slice(-3) + "turn)"
+					});
+					$('.gauge-d').css({
+						"transform": "rotate(." + ("00" +
+										g_detected).slice(-3) + "turn)"
+					});
+				}
+				if (g_detected != g_warned && g_warned != g_penalized) {
+					$('.g_warned').css({
+						"transform": "rotate(." + ("00" +
+										(g_warned - sep)).slice(-3) + "turn)"
+					});
+				}
+				else if (g_warned != g_penalized && g_warned != 0) {
+					$('.g_warned').css({
+						"transform": "rotate(." + ("00" +
+										(g_warned + sep)).slice(-3) + "turn)"
+					});
+				}
+				else
+				{
+					$('.g_warned').css({
+						"transform": "rotate(." + ("00" +
+										g_warned).slice(-3) + "turn)"
+					});
+				}
+				if (g_warned != g_penalized && g_warned != 0) {
+					if (g_detected != 0) {
+						$('.gauge-e, .gauge-f').css({
+							"transform": "rotate(." + (("00" +
+										(g_warned + sep)).slice(-3)) + "turn)"
+						});
+					} else {
+						$('.gauge-e, .gauge-f').css({
+							"transform": "rotate(." + (("00" +
+										(g_warned + sep)).slice(-3)) + "turn)"
+						});
+					}
+				}
+				else
+				{
+					$('.gauge-e, .gauge-f').css({
+						"transform": "rotate(." + ("00" +
+										g_warned).slice(-3) + "turn)"
+					});
+				}
+				$('.g_penalized').css({
+					"transform": "rotate(." + g_penalized + "turn)"
+				});
+
+				increase = setInterval(function() { //hover on function
+					if (val < 100) {
+						val += 1
+						$('#percent').text(val + "%")
+					} //close if
+				}, 10); //close settimeout
+				return;
+			}
+		}
+		$('.numeric-detected span').html(0);
+		$('.numeric-warned span').html(0);
+		$('.numeric-penalized span').html(0);
+//		$('.sep-container').html(deviceType(device.model));
+
+		$('.g_detected').css({
+			"display": "none"
+		});
+		$('.gauge-d').css({
+			"display": "none"
+		});
+		$('.g_warned').css({
+			"display": "none"
+		});
+		$('.gauge-e, .gauge-f').css({
+			"display": "none"
+		});
+		$('.g_penalized').css({
+			"display": "none"
+		});
+	}
+
+	function UpdateGaugesForTimestamp() {
+		var barkings = [0, 0, 0];
+		for (var i = 0; i < DataToDisplay.length; i++) {
+			barkings[0] += DataToDisplay[i].total[0];
+			barkings[1] += DataToDisplay[i].total[1];
+			barkings[2] += DataToDisplay[i].total[2];
+		}
+		setTimeout(function() {
+			SetGauges(barkings)
+		}, 100);
+	}
+</script>
+	<div class="top-bar">
+		<div class="dog-name">
+		</div>
+		<div class="app-param">
+			<span style="color:#fff;">
+				Canicalm
+			</span>&nbsp;Smart<img src="./img/param.svg"
+								   onclick="LoadPage('param');" />
+		</div>
+	</div>
+	<div class="nav-bar">
+		<div class="nav-img">
+			<img src="./img/calendar.svg" />
+		</div>
+		<div class="nav-title">
+			<i name="CS000005">Aujourd'hui</i>
+		</div>
+	</div>
+
+	<div id="day-abstract">
+		<div class="gauges-container">
+		</div>
+		<div class="sep-container">
+		</div>
+		<div class="numeric-container">
+			<div class="numeric-title"  onclick="demoBark();">
+				<i name="CS000020">Bips seuls</i>
+			</div>
+			<div class="numeric-detected">
+				<img src="./img/detected.svg" onclick="demoDetected();" />
+				<br><span>0</span><br><i name="CS000007">Détectés</i>
+			</div>
+			<div class="numeric-warned">
+				<img src="./img/warned.svg" height="35"
+					 onclick="demoWarned();" />
+				<br><span>0</span><br><i name="CS000008">Avertis</i>
+			</div>
+			<div class="numeric-penalized">
+				<img src="./img/penalized.svg" onclick="demoPenalized();" />
+				<br><span>0</span><br><i name="CS000009">Sanctionnés</i>
+			</div>
+		</div>
+	</div>
